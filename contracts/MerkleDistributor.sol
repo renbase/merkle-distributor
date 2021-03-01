@@ -38,6 +38,10 @@ contract MerkleDistributor is IMerkleDistributor {
         emit Claimed(msg.sender, _token, _amount);
     }
 
+    function getClaimed(address _account, address _token) external view override returns (uint256) {
+        return claimed[_account][_token];
+    }
+
     function updateMerkleRoot(bytes32 _merkleRoot) external override {
         merkleRoot = _merkleRoot;
     }
