@@ -1,92 +1,87 @@
-import { BigNumber, utils } from 'ethers'
-import BalanceTree from './balance-tree'
+import { BigNumber, utils } from "ethers";
+import BalanceTree from "./balance-tree";
 
-const { isAddress, getAddress } = utils
+const { isAddress, getAddress } = utils;
 
 // This is the blob that gets distributed and pinned to IPFS.
 // It is completely sufficient for recreating the entire merkle tree.
 // Anyone can verify that all air drops are included in the tree,
 // and the tree has no additional distributions.
 interface MerkleDistributorInfo {
-  merkleRoot: string
-  tokenTotal: string
-  claims: {
-    [account: string]: {
-      index: number
-      amount: string
-      proof: string[]
-      flags?: {
-        [flag: string]: boolean
-      }
-    }
-  }
+    merkleRoot: string;
+    tokens: MerkleToken;
 }
 
-type OldFormat = { [account: string]: number | string }
-type NewFormat = { address: string; earnings: string; reasons: string }
+interface MerkleToken {
+    [token: string]: {
+        tokenTotal: BigNumber;
+        claims: MerkleClaim;
+    };
+}
 
-export function parseBalanceMap(balances: OldFormat | NewFormat[]): MerkleDistributorInfo {
-  // if balances are in an old format, process them
-  const balancesInNewFormat: NewFormat[] = Array.isArray(balances)
-    ? balances
-    : Object.keys(balances).map(
-        (account): NewFormat => ({
-          address: account,
-          earnings: `0x${balances[account].toString(16)}`,
-          reasons: '',
-        })
-      )
+export interface MerkleClaim {
+    [account: string]: {
+        earnings: string;
+        proof: string[];
+    };
+}
 
-  const dataByAddress = balancesInNewFormat.reduce<{
-    [address: string]: { amount: BigNumber; flags?: { [flag: string]: boolean } }
-  }>((memo, { address: account, earnings, reasons }) => {
-    if (!isAddress(account)) {
-      throw new Error(`Found invalid address: ${account}`)
-    }
-    const parsed = getAddress(account)
-    if (memo[parsed]) throw new Error(`Duplicate address: ${parsed}`)
-    const parsedNum = BigNumber.from(earnings)
-    if (parsedNum.lte(0)) throw new Error(`Invalid amount for account: ${account}`)
+export type Balance = { token: string; account: string; earnings: BigNumber };
 
-    const flags = {
-      isSOCKS: reasons.includes('socks'),
-      isLP: reasons.includes('lp'),
-      isUser: reasons.includes('user'),
-    }
+export function parseBalanceMap(balances: Balance[]): MerkleDistributorInfo {
+    // Sort data by token, then by account
+    const sorted = balances.sort((a, b) => a.token.localeCompare(b.token) || a.account.localeCompare(b.account));
 
-    memo[parsed] = { amount: parsedNum, ...(reasons === '' ? {} : { flags }) }
-    return memo
-  }, {})
+    // Use checksummed token and account
+    const parsedSorted = sorted.map(({ token, account, earnings }) => {
+        if (!isAddress(token)) {
+            throw new Error(`Found invalid token address: ${token}`);
+        }
+        const parsedToken = getAddress(token);
 
-  const sortedAddresses = Object.keys(dataByAddress).sort()
+        if (!isAddress(account)) {
+            throw new Error(`Found invalid account address: ${account}`);
+        }
+        const parsedAccount = getAddress(account);
 
-  // construct a tree
-  const tree = new BalanceTree(
-    sortedAddresses.map((address) => ({ account: address, amount: dataByAddress[address].amount }))
-  )
+        const parsedEarnings = BigNumber.from(earnings);
+        if (parsedEarnings.lte(0)) throw new Error(`Invalid amount for account: ${account} for token: ${token}`);
 
-  // generate claims
-  const claims = sortedAddresses.reduce<{
-    [address: string]: { amount: string; index: number; proof: string[]; flags?: { [flag: string]: boolean } }
-  }>((memo, address, index) => {
-    const { amount, flags } = dataByAddress[address]
-    memo[address] = {
-      index,
-      amount: amount.toHexString(),
-      proof: tree.getProof(index, address, amount),
-      ...(flags ? { flags } : {}),
-    }
-    return memo
-  }, {})
+        return { token: parsedToken, account: parsedAccount, earnings: parsedEarnings };
+    });
 
-  const tokenTotal: BigNumber = sortedAddresses.reduce<BigNumber>(
-    (memo, key) => memo.add(dataByAddress[key].amount),
-    BigNumber.from(0)
-  )
+    // Construct a tree from parsedSorted
+    const tree = new BalanceTree(parsedSorted);
 
-  return {
-    merkleRoot: tree.getHexRoot(),
-    tokenTotal: tokenTotal.toHexString(),
-    claims,
-  }
+    // Generate claims for each token
+    const tokens = parsedSorted.reduce<MerkleToken>((memo, { token, account, earnings }) => {
+        const claim: MerkleClaim = {
+            [account]: {
+                earnings: earnings.toHexString(),
+                proof: tree.getProof(account, token, earnings),
+            },
+        };
+
+        if (!memo[token]) {
+            memo[token] = {
+                claims: claim,
+                tokenTotal: earnings,
+            };
+            return memo;
+        }
+
+        if (memo[token].claims[account]) {
+            throw new Error(`Duplicate account: ${account} for token: ${token}`);
+        }
+
+        memo[token].claims = Object.assign({}, memo[token].claims, claim);
+        memo[token].tokenTotal = memo[token].tokenTotal.add(earnings);
+
+        return memo;
+    }, {});
+
+    return {
+        merkleRoot: tree.getHexRoot(),
+        tokens,
+    };
 }
