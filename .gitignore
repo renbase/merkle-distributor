@@ -2,3 +2,5 @@ node_modules/
 build/
 wrangler.toml
 types
+artifacts
+cache
