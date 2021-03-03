@@ -45,11 +45,7 @@
     },
     "scripts": {
         "compile": "hh compile",
-        "test": "hh test",
-        "generate-merkle-root": "ts-node scripts/generate-merkle-root.ts",
-        "generate-merkle-root:example": "ts-node scripts/generate-merkle-root.ts --input scripts/example.json",
-        "prepublishOnly": "yarn test",
-        "typechain": "typechain --target ethers-v5 --outDir types 'abi/*.json'"
+        "test": "hh test"
     },
     "dependencies": {}
 }
