@@ -82,7 +82,7 @@ describe("MerkleDistributor", () => {
                 await token1.setBalance(alice.address, 0);
                 const proof0 = tree.getProof(alice.address, token1.address, BigNumber.from(100));
                 expect(await token1.balanceOf(alice.address)).to.eq(0);
-                await distributor.claim(token1.address, 100, proof0);
+                await distributor.connect(alice).claim(token1.address, 100, proof0);
                 expect(await token1.balanceOf(alice.address)).to.eq(100);
             });
 
