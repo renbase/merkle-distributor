@@ -40,8 +40,8 @@
         "typescript": "^3.7.3"
     },
     "scripts": {
-        "compile": "hh compile",
-        "test": "hh test"
+        "compile": "npx hardhat compile",
+        "test": "npx hardhat test"
     },
     "dependencies": {}
 }
