@@ -4,7 +4,7 @@
         "name": "David Perkins"
     },
     "description": "📦 A smart contract that distributes a balance of tokens according to a merkle root",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "homepage": "https://renbase.io",
     "repository": {
         "type": "git",
