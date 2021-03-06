@@ -6,13 +6,15 @@
     "description": "📦 A smart contract that distributes a balance of tokens according to a merkle root",
     "version": "1.0.2",
     "homepage": "https://renbase.io",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "./dist/*"
+    ],
     "repository": {
         "type": "git",
         "url": "https://github.com/renbase/merkle-distributor"
     },
-    "files": [
-        "build"
-    ],
     "engines": {
         "node": ">=10"
     },
@@ -41,7 +43,8 @@
     },
     "scripts": {
         "compile": "npx hardhat compile",
-        "test": "npx hardhat test"
+        "test": "npx hardhat test",
+        "prepublish": "tsc"
     },
     "dependencies": {}
 }
