@@ -14,7 +14,7 @@ interface MerkleDistributorInfo {
 
 interface MerkleToken {
     [token: string]: {
-        tokenTotal: BigNumber;
+        tokenTotal: string;
         claims: MerkleClaim;
     };
 }
@@ -62,7 +62,7 @@ export function parseBalanceMap(balances: Balance[]): MerkleDistributorInfo {
         if (!memo[token]) {
             memo[token] = {
                 claims: claim,
-                tokenTotal: earnings,
+                tokenTotal: earnings.toHexString(),
             };
             return memo;
         }
@@ -72,7 +72,7 @@ export function parseBalanceMap(balances: Balance[]): MerkleDistributorInfo {
         }
 
         memo[token].claims = Object.assign({}, memo[token].claims, claim);
-        memo[token].tokenTotal = memo[token].tokenTotal.add(earnings);
+        memo[token].tokenTotal = BigNumber.from(memo[token].tokenTotal).add(earnings).toHexString();
 
         return memo;
     }, {});
